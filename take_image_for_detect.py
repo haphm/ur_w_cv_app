@@ -92,7 +92,7 @@ def _main() -> None:
                 with open("test/xyz_coordinate.txt", "a") as file:
                     if x_value != 'nan' and y_value != 'nan' and z_value != 'nan':
                         print(f"XYZ value at pixel ({x_pixel}, {y_pixel}): {x_value} {y_value} {z_value}")
-                        file.write(f"{x_value} {y_value} {z_value} \n")
+                        file.write(f"{x_value} {y_value} {z_value} {1}\n")
     print("Detected object coordinates saved.")
 
 

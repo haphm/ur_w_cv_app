@@ -14,6 +14,7 @@ def move_to_position(position):
     try:
         current_pose = rtde_receive.getActualTCPPose()
         print(f"Current Pose: {current_pose}")
+        input("Press enter to continue...")
 
         target_pose = current_pose.copy()
         target_pose[0] = position[0]
