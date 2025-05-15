@@ -1,6 +1,5 @@
 from rtde_control import RTDEControlInterface
 from rtde_receive import RTDEReceiveInterface
-import time
 
 ROBOT_IP = "192.168.50.23"
 ROBOT_PORT = 30004
