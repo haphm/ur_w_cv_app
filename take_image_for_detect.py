@@ -89,16 +89,22 @@ def _main() -> None:
                 x_value = z_color_map[y_pixel, x_pixel, 0]
                 y_value = z_color_map[y_pixel, x_pixel, 1]
                 z_value = z_color_map[y_pixel, x_pixel, 2]
-                with open("test/xyz_coordinate.txt", "a") as file:
-                    if x_value != 'nan' and y_value != 'nan' and z_value != 'nan':
+                if 'nan' not in str(x_value) and 'nan' not in str(y_value) or 'nan' not in str(z_value):
+                    with open("test/xyz_coordinate.txt", "a") as file:
                         print(f"XYZ value at pixel ({x_pixel}, {y_pixel}): {x_value} {y_value} {z_value}")
                         file.write(f"{x_value} {y_value} {z_value} {1}\n")
+
+                with open("test/xyz_coordinate.txt", "r") as file:
+                    lines = file.readlines()
+
+                sorted_lines = sorted(lines, key=lambda line: float(line.split()[2]))
+
+                with open("test/xyz_coordinate.txt", "w") as file:
+                    file.writelines(sorted_lines)
+
     print("Detected object coordinates saved.")
 
 
 if __name__ == "__main__":
     _main()
-
-
-
 

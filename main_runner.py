@@ -8,5 +8,6 @@ def run_program(path):
         print(f"Error running {path}: \n{e.stderr}")
 
 if __name__=="__main__":
+    # run_program("control_robot_to_initial_pose.py")
     run_program("take_image_for_detect.py")
     run_program("robot_matrix_transformation.py")

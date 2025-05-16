@@ -1,3 +1,5 @@
+import os
+import sys
 import numpy as np
 from rtde_receive import RTDEReceiveInterface
 from rtde_control import RTDEControlInterface
@@ -63,7 +65,7 @@ def move_robot_to_position(position):
 
         target_pose = pick_pose.copy()
         target_pose[0] = position[0] * 0.001 - 0.055
-        target_pose[1] = position[1] * 0.001
+        target_pose[1] = position[1] * 0.001 - 0.05
         target_pose[2] = position[2] * 0.001 + 0.4
 
         print(f"Target Pose: {target_pose}")
@@ -81,8 +83,17 @@ def move_robot_to_position(position):
         print("Disconnected from robot")
 
 
-def main():
-    with open("test/xyz_coordinate.txt", "r") as f:
+def _main():
+    file_name = "test/xyz_coordinate.txt"
+    if not os.path.isfile(file_name):
+        print(f"File {file_name} does not exits. Program stopped.")
+        sys.exit()
+    if os.stat(file_name).st_size == 0:
+        print(f"File {file_name} is empty. Program stopped.")
+        sys.exit()
+
+    # Pick all
+    with open(file_name, "r") as f:
         for line in f:
             if 'nan' in line:
                 continue
@@ -92,5 +103,16 @@ def main():
 
             move_robot_to_position(robot_coordinate_to_move[0:3])
 
+    # # Pick 1
+    # with open(file_name, "r") as f:
+    #     line = f.readline()
+    #     point_in_camera_frame = np.array(list(map(float, line.split())))
+    #     print(f"Object coordinate reference camera {point_in_camera_frame}")
+    #     robot_coordinate_to_move = transform_point_to_camera(point_in_camera_frame)
+    #
+    #     move_robot_to_position(robot_coordinate_to_move[0:3])
+
+
 if __name__ == "__main__":
-    main()
+    _main()
+
