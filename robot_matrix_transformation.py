@@ -92,26 +92,55 @@ def _main():
         print(f"File {file_name} is empty. Program stopped.")
         sys.exit()
 
-    # Pick all
-    with open(file_name, "r") as f:
-        for line in f:
-            if 'nan' in line:
-                continue
-            point_in_camera_frame = np.array(list(map(float, line.split())))
-            print(f"Object coordinate reference camera {point_in_camera_frame}")
-            robot_coordinate_to_move = transform_point_to_camera(point_in_camera_frame)
-
-            move_robot_to_position(robot_coordinate_to_move[0:3])
+    # # Pick all
+    # with open(file_name, "r") as f:
+    #     for line in f:
+    #         l = line.strip().split()
+    #         point_in_camera_frame = np.array(list(map(float, l[:4])))
+    #         print(f"Object coordinate reference camera {point_in_camera_frame}")
+    #         robot_coordinate_to_move = transform_point_to_camera(point_in_camera_frame)
+    #         move_robot_to_position(robot_coordinate_to_move[0:3])
 
     # # Pick 1
     # with open(file_name, "r") as f:
     #     line = f.readline()
-    #     point_in_camera_frame = np.array(list(map(float, line.split())))
+    #     l = line.strip().split()
+    #     point_in_camera_frame = np.array(list(map(float, l[:4)))
     #     print(f"Object coordinate reference camera {point_in_camera_frame}")
     #     robot_coordinate_to_move = transform_point_to_camera(point_in_camera_frame)
-    #
     #     move_robot_to_position(robot_coordinate_to_move[0:3])
 
+    # # Pick by color
+    # color_to_pick = 'yellow' # 'yellow', 'blue', 'brown', 'white', 'black'
+    # with open(file_name, "r") as f:
+    #     for line in f:
+    #         l = line.strip().split()
+    #         if l[4] == color_to_pick:
+    #             point_in_camera_frame = np.array(list(map(float, l[:4])))
+    #             print(f"Object coordinate reference camera {point_in_camera_frame}")
+    #             robot_coordinate_to_move = transform_point_to_camera(point_in_camera_frame)
+    #             move_robot_to_position(robot_coordinate_to_move[0:3])
+    #         else:
+    #             continue
+
+    with open(file_name, "r") as f:
+        lines = f.readlines()
+        color_list = []
+        for line in lines:
+            color_list.append(line.strip().split()[-1])
+        color_to_pick = input(f"Available color are: {color_list}\nPlease select color to take: ")
+        for line in lines:
+            l = line.strip().split()
+            if l[4] == color_to_pick:
+                point_in_camera_frame = np.array(list(map(float, l[:4])))
+                print(f"Object coordinate reference camera {point_in_camera_frame}")
+                robot_coordinate_to_move = transform_point_to_camera(point_in_camera_frame)
+                move_robot_to_position(robot_coordinate_to_move[0:3])
+            else:
+                continue
+
+
+    print("Program stopped.")
 
 if __name__ == "__main__":
     _main()

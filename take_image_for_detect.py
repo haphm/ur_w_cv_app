@@ -30,7 +30,7 @@ def _detect_objects(image: np.ndarray) -> None:
             result.save("test/result.png")  # save the image with predictions
 
 def _detect_color(frame, x_coor, y_coor) -> str:
-    color_thresholds = [10, 20, 30, 85, 130, 160, 179]
+    color_thresholds = [8, 20, 30, 85, 130, 160, 179]
     color_name = ['red', 'brown', 'yellow', 'green', 'blue', 'violet', 'red']
     hsv_pixel = frame[x_coor, y_coor]
     h, s, v = hsv_pixel
