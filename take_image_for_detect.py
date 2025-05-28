@@ -3,7 +3,9 @@ import shutil
 import cv2
 import numpy as np
 import zivid
+from zividsamples.display import display_bgr
 from ultralytics import YOLO
+
 
 
 def _point_cloud_to_cv_bgr(point_cloud: zivid.PointCloud) -> np.ndarray:
@@ -106,7 +108,7 @@ def _main() -> None:
                 print(f"Object at x_coord: {x_pixel}, y_coord: {y_pixel -150} is in {color_detected} color")
 
                 if y_pixel > 1200:
-                    y_pixel = 1200
+                    y_pixel = 1199
                 x_value = z_color_map[y_pixel, x_pixel, 0]
                 y_value = z_color_map[y_pixel, x_pixel, 1]
                 z_value = z_color_map[y_pixel, x_pixel, 2]
