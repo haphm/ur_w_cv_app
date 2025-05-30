@@ -31,13 +31,18 @@ class MainWindow(QWidget):
         # Task buttons
         self.btn_detect = QPushButton("Detect", self)
         self.btn_detect.setStyleSheet("font: Inter;"
-                                         "font-size: 30px;")
+                                      "font-size: 30px;")
         self.btn_detect.clicked.connect(self.detection)
 
         self.btn_color = QPushButton("Colors", self)
         self.btn_color.setStyleSheet("font: Inter;"
-                                        "font-size: 30px;")
+                                     "font-size: 30px;")
         self.btn_color.clicked.connect(self.load_colors)
+
+        self.btn_pick = QPushButton("Pick", self)
+        self.btn_pick.setStyleSheet("font: Inter;"
+                                    "font-size: 30px;")
+        self.btn_pick.clicked.connect(self.picking)
 
         # Radio button container
         self.rdo_layout = QVBoxLayout()
@@ -55,6 +60,7 @@ class MainWindow(QWidget):
         left_layout.addWidget(self.btn_detect)
         left_layout.addWidget(self.btn_color)
         left_layout.addWidget(scroll_area)
+        left_layout.addWidget(self.btn_pick)
         left_layout.addStretch(1)
 
         # Image display
@@ -77,7 +83,7 @@ class MainWindow(QWidget):
         self.label = QLabel("HAMK Tech Robotics Team", self)
         self.label.setFont(QFont("Inter", 20))
         self.label.setStyleSheet("color: white;"
-                                "background-color: #003755;")
+                                 "background-color: #003755;")
         self.label.setAlignment(Qt.AlignCenter)
 
         # Final layout
@@ -121,9 +127,25 @@ class MainWindow(QWidget):
 
         for color in colors:
             rdo_btn = QRadioButton(color)
-            rdo_btn.setStyleSheet(f"color: {color};")
+            rdo_btn.setStyleSheet(f"color: {color};"
+                                  "font-size: 25px;")
+            rdo_btn.toggled.connect(self.rdo_btn_changed)
             self.rdo_layout.addWidget(rdo_btn)
 
+    def rdo_btn_changed(self):
+        rdo_btn_check = self.sender()
+        if rdo_btn_check.isChecked():
+            print(f"color {rdo_btn_check.text()} is selected")
+
+    def picking(self):
+        selected_color = None
+        for i in range(self.rdo_layout.count()):
+            widget = self.rdo_layout.itemAt(i).widget()
+            if isinstance(widget, QRadioButton) and widget.isChecked():
+                selected_color = widget.text()
+        if selected_color:
+            subprocess.run(["python3", "robot_matrix_transformation.py", selected_color])
+            print("Process is finished!")
 
 def main():
     app = QApplication(sys.argv)
