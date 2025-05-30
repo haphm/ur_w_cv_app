@@ -17,10 +17,6 @@ class MainWindow(QWidget):
         self.setGeometry(0, 0, 600, 600)
         self.centerUI()
         self.initUI()
-        # self.setWindowIcon(QIcon(LOGO))
-        # self.radio_buttons = []
-        # self.selected_color = None
-
 
     def initUI(self):
         # Logo
