@@ -1,42 +1,92 @@
+import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QLabel, QWidget, QVBoxLayout, QHBoxLayout
+import subprocess
+from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QLabel, QWidget, QGridLayout, QPushButton, \
+    QRadioButton, QVBoxLayout, QFrame, QHBoxLayout, QGroupBox, QScrollArea
 from PyQt5.QtGui import QIcon, QFont, QPixmap
 from PyQt5.QtCore import Qt
 
 LOGO = "HAMK_Logo_vertical.jpg"
+PREDICTED = "./test/result.png"
+RESULTS = "./test/xyz_coordinate.txt"
 
-class MainWindow(QMainWindow):
+class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.initUI()
-
-    def initUI(self):
         self.setWindowTitle("Spraycan Pickup App")
         self.setGeometry(0, 0, 600, 600)
         self.centerUI()
-        self.setWindowIcon(QIcon(LOGO))
+        self.initUI()
+        # self.setWindowIcon(QIcon(LOGO))
+        # self.radio_buttons = []
+        # self.selected_color = None
 
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
 
-        label = QLabel("HAMK Tech Robotics Team", self)
-        label.setFont(QFont("Inter", 20))
-        label.setStyleSheet("color: white;"
-                            "background-color: #003755;")
-        label.setAlignment(Qt.AlignCenter)
+    def initUI(self):
+        # Logo
+        self.logo = QLabel(self)
+        self.logo.setPixmap(QPixmap(LOGO).scaledToHeight(100, Qt.SmoothTransformation))
+        self.logo.setAlignment(Qt.AlignCenter)
 
-        logo = QLabel(self)
-        logo.setFixedWidth(100)
-        logo.setFixedHeight(100)
-        logo.setPixmap(QPixmap(LOGO))
-        logo.setScaledContents(True)
+        # Task buttons
+        self.btn_detect = QPushButton("Detect", self)
+        self.btn_detect.setStyleSheet("font: Inter;"
+                                         "font-size: 30px;")
+        self.btn_detect.clicked.connect(self.detection)
 
-        vbox = QVBoxLayout()
-        vbox.addWidget(logo, 0, Qt.AlignBottom)
-        vbox.addWidget(label, 1, Qt.AlignBottom)
+        self.btn_color = QPushButton("Colors", self)
+        self.btn_color.setStyleSheet("font: Inter;"
+                                        "font-size: 30px;")
+        self.btn_color.clicked.connect(self.load_colors)
 
-        central_widget.setLayout(vbox)
+        # Radio button container
+        self.rdo_layout = QVBoxLayout()
+        self.rdo_group_box = QGroupBox("Colors")
+        self.rdo_group_box.setLayout(self.rdo_layout)
 
+        scroll_area = QScrollArea()
+        scroll_area.setStyleSheet("background-color: #FFD7BE;")
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(self.rdo_group_box)
+        scroll_area.setFixedHeight(300)
+
+        # Left panel layout
+        left_layout = QVBoxLayout()
+        left_layout.addWidget(self.btn_detect)
+        left_layout.addWidget(self.btn_color)
+        left_layout.addWidget(scroll_area)
+        left_layout.addStretch(1)
+
+        # Image display
+        self.image = QLabel(self)
+        self.image.setFixedWidth(640)
+        self.image.setFixedHeight(480)
+        self.image.setPixmap(QPixmap(PREDICTED))
+        self.image.setScaledContents(True)
+
+        # Combine layout
+        central_layout = QHBoxLayout()
+        left_frame = QFrame()
+        left_frame.setLayout(left_layout)
+        left_frame.setFixedWidth(150)
+
+        central_layout.addWidget(left_frame)
+        central_layout.addWidget(self.image)
+
+        # Team name
+        self.label = QLabel("HAMK Tech Robotics Team", self)
+        self.label.setFont(QFont("Inter", 20))
+        self.label.setStyleSheet("color: white;"
+                                "background-color: #003755;")
+        self.label.setAlignment(Qt.AlignCenter)
+
+        # Final layout
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.logo)
+        main_layout.addLayout(central_layout)
+        main_layout.addWidget(self.label)
+
+        self.setLayout(main_layout)
 
     def centerUI(self):
         qr = self.frameGeometry()
@@ -44,12 +94,35 @@ class MainWindow(QMainWindow):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    # def image(self, path):
-    #     label = QLabel(self)
-    #     label.setGeometry(self.width() - 100, self.height() - 100, 100, 100)
-    #     pixmap = QPixmap(path)
-    #     label.setPixmap(pixmap)
-    #     label.setScaledContents(True)
+    def detection(self):
+        print("Button Clicked!")
+        self.btn_detect.setText("Detecting...")
+        self.btn_detect.setDisabled(True)
+        subprocess.run(["python3", "take_image_for_detect.py"])
+
+        if os.path.exists(PREDICTED):
+            self.image.setPixmap(QPixmap(PREDICTED))
+            self.btn_detect.setText("Detect")
+            self.btn_detect.setDisabled(False)
+        else:
+            self.image.setText("Detection failed!")
+
+    def load_colors(self):
+        with open(RESULTS, 'r') as f:
+            lines = f.readlines()
+            colors = []
+            for line in lines:
+                colors.append(line.strip().split()[-1])
+
+        for i in reversed(range(self.rdo_layout.count())):
+            widget = self.rdo_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        for color in colors:
+            rdo_btn = QRadioButton(color)
+            rdo_btn.setStyleSheet(f"color: {color};")
+            self.rdo_layout.addWidget(rdo_btn)
 
 
 def main():
