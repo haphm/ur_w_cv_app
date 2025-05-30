@@ -4,6 +4,7 @@ import shutil
 import cv2
 import numpy as np
 import zivid
+from torch.ao.nn.quantized.functional import threshold
 from zividsamples.display import display_bgr
 from ultralytics import YOLO
 
@@ -22,7 +23,7 @@ def _detect_objects(image: np.ndarray) -> None:
     model = YOLO("runs/detect/train4/weights/best.pt")  # load a custom model
 
     # Predict with the model
-    results = model(image)  # predict on an image
+    results = model(image, conf=0.8)  # predict on an image
 
     # Access the results
     with open("test/result.txt", "w") as f:
