@@ -1,3 +1,4 @@
+import sys
 import os
 import shutil
 import cv2
@@ -76,7 +77,7 @@ def _main() -> None:
 
     print("Image captured.")
 
-    with (app):
+    with app:
         data_file = "test/detect.zdf"
         print(f"Reading ZDF frame from file: {data_file}")
         frame = zivid.Frame(data_file)
@@ -125,7 +126,8 @@ def _main() -> None:
                 with open("test/xyz_coordinate.txt", "w") as file:
                     file.writelines(sorted_lines)
 
-    print("Detected object coordinates saved.")
+        print("Detected object coordinates saved.")
+        sys.exit(0)
 
 
 if __name__ == "__main__":
