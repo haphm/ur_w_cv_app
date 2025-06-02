@@ -1,9 +1,9 @@
 import os
 import sys
 import subprocess
-from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QLabel, QWidget, QGridLayout, QPushButton, \
+from PyQt5.QtWidgets import QApplication, QDesktopWidget, QLabel, QWidget, QPushButton, \
     QRadioButton, QVBoxLayout, QFrame, QHBoxLayout, QGroupBox, QScrollArea
-from PyQt5.QtGui import QIcon, QFont, QPixmap
+from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt
 
 LOGO = "HAMK_Logo_vertical.jpg"
@@ -40,6 +40,11 @@ class MainWindow(QWidget):
                                     "font-size: 30px;")
         self.btn_pick.clicked.connect(self.picking)
 
+        self.btn_pick_all = QPushButton("Pick All", self)
+        self.btn_pick_all.setStyleSheet("font: Inter;"
+                                    "font-size: 30px;")
+        self.btn_pick_all.clicked.connect(self.picking_all)
+
         # Radio button container
         self.rdo_layout = QVBoxLayout()
         self.rdo_group_box = QGroupBox("Colors")
@@ -57,6 +62,7 @@ class MainWindow(QWidget):
         left_layout.addWidget(self.btn_color)
         left_layout.addWidget(scroll_area)
         left_layout.addWidget(self.btn_pick)
+        left_layout.addWidget(self.btn_pick_all)
         left_layout.addStretch(1)
 
         # Image display
@@ -97,7 +103,7 @@ class MainWindow(QWidget):
         self.move(qr.topLeft())
 
     def detection(self):
-        print("Button Clicked!")
+        print("Detection started!")
         self.btn_detect.setText("Detecting...")
         self.btn_detect.setDisabled(True)
         subprocess.run(["python3", "take_image_for_detect.py"])
@@ -142,6 +148,10 @@ class MainWindow(QWidget):
         if selected_color:
             subprocess.run(["python3", "robot_matrix_transformation.py", selected_color])
             print("Process is finished!")
+
+    def picking_all(self):
+        subprocess.run(["python3", "robot_matrix_transformation.py", "all"])
+        print("Process is finished!")
 
 def main():
     app = QApplication(sys.argv)
