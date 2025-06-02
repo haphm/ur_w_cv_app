@@ -4,11 +4,22 @@ import subprocess
 from PyQt5.QtWidgets import QApplication, QDesktopWidget, QLabel, QWidget, QPushButton, \
     QRadioButton, QVBoxLayout, QFrame, QHBoxLayout, QGroupBox, QScrollArea
 from PyQt5.QtGui import QFont, QPixmap
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 LOGO = "HAMK_Logo_vertical.jpg"
 PREDICTED = "./test/result.png"
 RESULTS = "./test/xyz_coordinate.txt"
+
+class Worker(QThread):
+    finished = pyqtSignal()
+
+    def __init__(self, command):
+        super().__init__()
+        self.command = command
+
+    def run(self):
+        subprocess.run(self.command, shell=True)
+        self.finished.emit()
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -106,8 +117,15 @@ class MainWindow(QWidget):
         print("Detection started!")
         self.btn_detect.setText("Detecting...")
         self.btn_detect.setDisabled(True)
-        subprocess.run(["python3", "take_image_for_detect.py"])
 
+        self.thread = Worker("python3 take_image_for_detect.py")
+        self.thread.finished.connect(self.finished_detection)
+        self.thread.start()
+
+        # subprocess.run(["python3", "take_image_for_detect.py"])
+
+    def finished_detection(self):
+        print("Program is finished.")
         if os.path.exists(PREDICTED):
             self.image.setPixmap(QPixmap(PREDICTED))
             self.btn_detect.setText("Detect")
@@ -146,12 +164,30 @@ class MainWindow(QWidget):
             if isinstance(widget, QRadioButton) and widget.isChecked():
                 selected_color = widget.text()
         if selected_color:
-            subprocess.run(["python3", "robot_matrix_transformation.py", selected_color])
-            print("Process is finished!")
+            self.btn_pick.setText("Picking...")
+            self.btn_pick.setDisabled(True)
+            self.thread = Worker(f"python3 robot_matrix_transformation.py {selected_color}")
+            self.thread.finished.connect(self.finished_pick_color)
+            self.thread.start()
+            # subprocess.run(["python3", "robot_matrix_transformation.py", selected_color])
+
+    def finished_pick_color(self):
+        print("Process is finished!")
+        self.btn_pick.setText("Pick")
+        self.btn_pick.setDisabled(False)
 
     def picking_all(self):
-        subprocess.run(["python3", "robot_matrix_transformation.py", "all"])
+        self.btn_pick_all.setText("Picking...")
+        self.btn_pick_all.setDisabled(True)
+        self.thread = Worker(f"python3 robot_matrix_transformation.py all")
+        self.thread.finished.connect(self.finished_pick_all)
+        self.thread.start()
+        # subprocess.run(["python3", "robot_matrix_transformation.py", "all"])
+
+    def finished_pick_all(self):
         print("Process is finished!")
+        self.btn_pick_all.setText("Pick All")
+        self.btn_pick_all.setDisabled(False)
 
 def main():
     app = QApplication(sys.argv)
