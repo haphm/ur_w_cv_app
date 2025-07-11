@@ -24,12 +24,14 @@ def read_current_position():
     rtde_receive = RTDEReceiveInterface(ROBOT_IP)
     current_pose = rtde_receive.getActualTCPPose()
     print(f"Current Pose: {current_pose}")
-    input("Press enter to continue...")
+    # input("Press enter to continue...")
 
 if __name__ == "__main__":
-    # # Read current robot position
-    # read_current_position()
+    # while True:
+    #     # Read current robot position
+    #     read_current_position()
+    #     input("Press Enter to continue...")
 
     # Example position to move to
-    target_position = [-0.05210053790641115, -0.27605043364346304, 0.4070199063449296, -0.039457233465660886, 2.5466319129173374, -1.7801884436371929]
+    target_position = [-0.052120238377700065, -0.2760688724179189, 0.40696261118541904, -0.03782026574893962, 2.5915557209775604, -1.71312026416318]
     move_to_position(target_position)
