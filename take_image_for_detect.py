@@ -1,13 +1,11 @@
-import sys
 import os
 import shutil
 import cv2
 import numpy as np
 import zivid
-from torch.ao.nn.quantized.functional import threshold
-from zividsamples.display import display_bgr
 from ultralytics import YOLO
-
+from multiprocessing.connection import Listener
+from shared_common import APP_TO_CAM_ADDRESS, AUTH_KEY
 
 
 def _point_cloud_to_cv_bgr(point_cloud: zivid.PointCloud) -> np.ndarray:
@@ -34,7 +32,7 @@ def _detect_objects(image: np.ndarray) -> None:
             result.save("test/result.png")  # save the image with predictions
 
 def _detect_color(frame, x_coor, y_coor) -> str:
-    color_thresholds = [8, 20, 30, 85, 130, 160, 179]
+    color_thresholds = [3, 20, 30, 85, 130, 160, 179]
     color_name = ['red', 'brown', 'yellow', 'green', 'blue', 'violet', 'red']
     hsv_pixel = frame[x_coor, y_coor]
     h, s, v = hsv_pixel
@@ -49,7 +47,6 @@ def _detect_color(frame, x_coor, y_coor) -> str:
             return color
     return "Undefined"
 
-
 def _main() -> None:
     # Specify the directory name
     test_directory = "test"
@@ -61,6 +58,7 @@ def _main() -> None:
 
     # Connect to the camera
     app = zivid.Application()
+
     camera = app.connect_camera(serial_number="21469A61")
 
     settings = zivid.Settings(
@@ -68,68 +66,89 @@ def _main() -> None:
         color=zivid.Settings2D(acquisitions=[zivid.Settings2D.Acquisition()]),
     )
 
-    with camera.capture_2d_3d(settings) as frame:
-        data_file = f"test/detect.zdf"
-        frame.save(data_file)
+    listener = Listener(APP_TO_CAM_ADDRESS, authkey=AUTH_KEY)
 
-        # Save the 2D image
-        color_image = frame.frame_2d().image_bgra_srgb()
-        color_image.save(f"test/detect.jpg")
+    while True:
+        print("Camera worker: Waiting for signal...")
+        conn = listener.accept()
+        msg = conn.recv()
+        print("Camera is ready!")
 
-    print("Image captured.")
+        if msg == "take_photo":
+            open("test/xyz_coordinate.txt", "w").close()
+            frame = camera.capture_2d_3d(settings)
+            data_file = f"test/detect.zdf"
+            frame.save(data_file)
 
-    with app:
-        data_file = "test/detect.zdf"
-        print(f"Reading ZDF frame from file: {data_file}")
-        frame = zivid.Frame(data_file)
-        point_cloud = frame.point_cloud()
+            # Save the 2D image
+            color_image = frame.frame_2d().image_bgra_srgb()
+            color_image.save(f"test/detect.jpg")
 
-        print("Converting to BGR image in OpenCV format")
-        bgr = _point_cloud_to_cv_bgr(point_cloud)
-        hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+            print("Image captured.")
 
-        bgr_image_file = "test/ImageRGB.png"
-        print(f"Visualizing and saving BGR image to file: {bgr_image_file}")
-        _visualize_and_save_image(bgr, bgr_image_file, "BGR image")
-        _detect_objects(bgr)
+            # with app:
+            data_file = "test/detect.zdf"
+            print(f"Reading ZDF frame from file: {data_file}")
+            frame = zivid.Frame(data_file)
+            point_cloud = frame.point_cloud()
 
-        print("Converting to Depth map in OpenCV format")
-        z_color_map = point_cloud.copy_data('xyz')
+            print("Converting to BGR image in OpenCV format")
+            bgr = _point_cloud_to_cv_bgr(point_cloud)
+            hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
 
-        with open("test/result.txt", "r") as f:
-            for line in f:
-                xywh = line.strip().split("\n")
-                char = ['[', ']', ',']
-                for c in char:
-                    xywh = [line.replace(c, "") for line in xywh]
-                xywh = [list(map(float, line.strip().split())) for line in xywh]
-                xywh = np.array(xywh)
-                x_pixel = int(xywh[0][0])
-                y_pixel = int(xywh[0][1] + 150)
-                color_detected = _detect_color(hsv, y_pixel -150, x_pixel)
-                print(f"Object at x_coord: {x_pixel}, y_coord: {y_pixel -150} is in {color_detected} color")
+            bgr_image_file = "test/ImageRGB.png"
+            print(f"Visualizing and saving BGR image to file: {bgr_image_file}")
+            _visualize_and_save_image(bgr, bgr_image_file, "BGR image")
+            _detect_objects(bgr)
 
-                if y_pixel > 1200:
-                    y_pixel = 1199
-                x_value = z_color_map[y_pixel, x_pixel, 0]
-                y_value = z_color_map[y_pixel, x_pixel, 1]
-                z_value = z_color_map[y_pixel, x_pixel, 2]
-                if 'nan' not in str(x_value) and 'nan' not in str(y_value) or 'nan' not in str(z_value):
+            print("Converting to Depth map in OpenCV format")
+            z_color_map = point_cloud.copy_data('xyz')
+
+            with open("test/result.txt", "r") as f:
+                for line in f:
+                    xywh = line.strip().split("\n")
+                    char = ['[', ']', ',']
+                    for c in char:
+                        xywh = [line.replace(c, "") for line in xywh]
+                    xywh = [list(map(float, line.strip().split())) for line in xywh]
+                    xywh = np.array(xywh)
+                    x_pixel = int(xywh[0][0])
+                    y_pixel = int(xywh[0][1] + 150)
+                    color_detected = _detect_color(hsv, y_pixel -150, x_pixel)
+                    print(f"Object at x_coord: {x_pixel}, y_coord: {y_pixel -150} is in {color_detected} color")
+
+                    if y_pixel > 1200:
+                        y_pixel = 1199
+                    x_value = z_color_map[y_pixel, x_pixel, 0]
+                    y_value = z_color_map[y_pixel, x_pixel, 1]
+                    z_value = z_color_map[y_pixel, x_pixel, 2]
                     with open("test/xyz_coordinate.txt", "a") as file:
-                        print(f"XYZ value at pixel ({x_pixel}, {y_pixel}): {x_value} {y_value} {z_value}")
-                        file.write(f"{x_value} {y_value} {z_value} {1} {color_detected}\n")
+                        if 'nan' not in str(x_value) and 'nan' not in str(y_value) or 'nan' not in str(z_value):
+                            print(f"XYZ value at pixel ({x_pixel}, {y_pixel}): {x_value} {y_value} {z_value}")
+                            file.write(f"{x_value} {y_value} {z_value} {1} {color_detected}\n")
 
-                with open("test/xyz_coordinate.txt", "r") as file:
-                    lines = file.readlines()
+                    with open("test/xyz_coordinate.txt", "r") as file:
+                        lines = file.readlines()
 
-                sorted_lines = sorted(lines, key=lambda line: float(line.split()[2]))
+                    sorted_lines = sorted(lines, key=lambda line: float(line.split()[2]))
 
-                with open("test/xyz_coordinate.txt", "w") as file:
-                    file.writelines(sorted_lines)
+                    with open("test/xyz_coordinate.txt", "w") as file:
+                        file.writelines(sorted_lines)
 
-        print("Detected object coordinates saved.")
-        sys.exit(0)
-
+                    conn.send("Task done.")
+            print("Detected object coordinates saved.")
+            conn.close()
+        elif msg == "shutdown":
+            print("Disconnecting Zivid camera.")
+            try:
+                camera.disconnect()
+            except Exception as e:
+                print("Failed to disconnect camera:", e)
+            break
+        else:
+            conn.send(f"Unknown command: {msg}")
+    conn.close()
+    listener.close()
 
 if __name__ == "__main__":
     _main()
