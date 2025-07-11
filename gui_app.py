@@ -5,6 +5,8 @@ from PyQt5.QtWidgets import QApplication, QDesktopWidget, QLabel, QWidget, QPush
     QRadioButton, QVBoxLayout, QFrame, QHBoxLayout, QGroupBox, QScrollArea
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from multiprocessing.connection import Client
+from shared_common import APP_TO_CAM_ADDRESS, AUTH_KEY
 
 LOGO = "HAMK_Logo_vertical.jpg"
 PREDICTED = "./test/result.png"
@@ -28,6 +30,9 @@ class MainWindow(QWidget):
         self.setGeometry(0, 0, 600, 600)
         self.centerUI()
         self.initUI()
+
+        self.threadCam = Worker("python3 take_image_for_detect.py")
+        self.threadCam.start()
 
     def initUI(self):
         # Logo
@@ -118,20 +123,22 @@ class MainWindow(QWidget):
         self.btn_detect.setText("Detecting...")
         self.btn_detect.setDisabled(True)
 
-        self.thread = Worker("python3 take_image_for_detect.py")
-        self.thread.finished.connect(self.finished_detection)
-        self.thread.start()
-
-        # subprocess.run(["python3", "take_image_for_detect.py"])
-
-    def finished_detection(self):
-        print("Program is finished.")
-        if os.path.exists(PREDICTED):
-            self.image.setPixmap(QPixmap(PREDICTED))
-            self.btn_detect.setText("Detect")
-            self.btn_detect.setDisabled(False)
-        else:
-            self.image.setText("Detection failed!")
+        try:
+            conn = Client(APP_TO_CAM_ADDRESS, authkey=AUTH_KEY)
+            conn.send("take_photo")
+            print("Camera: Waiting for signal...")
+            response = conn.recv()  # Wait for response
+            print("Program is finished.")
+            if os.path.exists(PREDICTED):
+                self.image.setPixmap(QPixmap(PREDICTED))
+                self.btn_detect.setText("Detect")
+                self.btn_detect.setDisabled(False)
+            else:
+                self.image.setText("Detection failed!")
+            print("Camera response:", response)
+            conn.close()
+        except Exception as e:
+            print("Failed to send photo command:", e)
 
     def load_colors(self):
         with open(RESULTS, 'r') as f:
@@ -169,7 +176,6 @@ class MainWindow(QWidget):
             self.thread = Worker(f"python3 robot_matrix_transformation.py {selected_color}")
             self.thread.finished.connect(self.finished_pick_color)
             self.thread.start()
-            # subprocess.run(["python3", "robot_matrix_transformation.py", selected_color])
 
     def finished_pick_color(self):
         print("Process is finished!")
@@ -182,14 +188,27 @@ class MainWindow(QWidget):
         self.thread = Worker(f"python3 robot_matrix_transformation.py all")
         self.thread.finished.connect(self.finished_pick_all)
         self.thread.start()
-        # subprocess.run(["python3", "robot_matrix_transformation.py", "all"])
 
     def finished_pick_all(self):
         print("Process is finished!")
         self.btn_pick_all.setText("Pick All")
         self.btn_pick_all.setDisabled(False)
 
+    def closeEvent(self, event):
+        print("GUI closing: sending shutdown to camera...")
+        try:
+            conn = Client(APP_TO_CAM_ADDRESS, authkey=AUTH_KEY)
+            conn.send("shutdown")
+            response = conn.recv()
+            print("Camera response:", response)
+            conn.close()
+        except Exception as e:
+            print("Failed to shutdown camera:", e)
+
+        event.accept()  # Allow the window to close
+
 def main():
+    print("Initilizing program... \nPlease wait!")
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
