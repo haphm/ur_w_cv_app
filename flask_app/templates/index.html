@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Spraycan Pickup App</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Inter, sans-serif;
+            background-color: #ffd7be;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .left-panel {
+            width: 200px;
+            padding: 20px;
+            background-color: #e1ecf4;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .left-panel button {
+            font-size: 18px;
+            padding: 10px 20px;
+            width: 100%;
+        }
+        .main-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .image-container {
+            max-width: 640px;
+            width: 100%;
+        }
+        .image-container img {
+            width: 100%;
+            height: auto;
+            border: 2px solid #003755;
+        }
+        .color-list {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 640px; /* Align with image */
+        }
+        .color-list label {
+            font-size: 18px;
+            margin: 4px 0;
+        }
+        .footer {
+            background-color: #003755;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 18px;
+            margin-top: auto;
+            width: 100%;
+        }
+    </style>
+    <script>
+        function submitPickForm() {
+            const form = document.getElementById("color-form");
+            const selected = form.querySelector('input[name="color"]:checked');
+            if (selected) {
+                form.submit();
+            } else {
+                alert("Please select a color before picking.");
+            }
+        }
+    </script>
+</head>
+<body>
+
+<div class="container">
+    <!-- Left Panel: Buttons -->
+    <div class="left-panel">
+        <img src="{{ url_for('static', filename='HAMK_Logo_vertical.jpg') }}" style="width:100%; height:auto;" />
+
+        <button onclick="document.getElementById('detect-form').submit()">Detect</button>
+        <button onclick="submitPickForm()">Pick</button>
+        <button onclick="document.getElementById('pick-all-form').submit()">Pick All</button>
+
+        <!-- Hidden forms to preserve layout -->
+        <form method="post" action="/detect" id="detect-form" style="display: none;"></form>
+        <form method="post" action="/pick_all" id="pick-all-form" style="display: none;"></form>
+    </div>
+
+    <!-- Right Panel: Image + Colors -->
+    <div class="main-panel">
+        <div class="image-container">
+            {% if predicted_exists %}
+                <img src="{{ url_for('image') }}" alt="Detected Image">
+            {% else %}
+                <p>No image available</p>
+            {% endif %}
+        </div>
+
+        {% if colors %}
+        <form method="post" action="/pick" class="color-list" id="color-form">
+            {% for color in colors %}
+                <label style="color: {{ color }}">
+                    <input type="radio" name="color" value="{{ color }}">
+                    {{ color }}
+                </label>
+            {% endfor %}
+        </form>
+        {% endif %}
+
+        <div class="footer">HAMK Tech Robotics Team</div>
+    </div>
+</div>
+
+</body>
+</html>
