@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import cv2
 import numpy as np
@@ -13,7 +14,6 @@ def _point_cloud_to_cv_bgr(point_cloud: zivid.PointCloud) -> np.ndarray:
     return bgra[:, :, :3]
 
 def _visualize_and_save_image(image: np.ndarray, image_file: str, title: str) -> None:
-    # display_bgr(image, title)
     cv2.imwrite(image_file, image)
 
 def _detect_objects(image: np.ndarray) -> None:
@@ -70,95 +70,102 @@ def _main() -> None:
 
     while True:
         print("Camera worker: Waiting for signal...")
-        conn = listener.accept()
-        msg = conn.recv()
-        print("Camera is ready!")
+        try:
+            conn = listener.accept()
+            msg = conn.recv()
+            print("Camera is ready!")
 
-        if msg == "take_photo":
-            open("test/xyz_coordinate.txt", "w").close()
-            frame = camera.capture_2d_3d(settings)
-            data_file = f"test/detect.zdf"
-            frame.save(data_file)
+            if msg == "take_photo":
+                open("test/xyz_coordinate.txt", "w").close()
+                frame = camera.capture_2d_3d(settings)
+                data_file = f"test/detect.zdf"
+                frame.save(data_file)
 
-            # Save the 2D image
-            color_image = frame.frame_2d().image_bgra_srgb()
-            color_image.save(f"test/detect.jpg")
+                # Save the 2D image
+                color_image = frame.frame_2d().image_bgra_srgb()
+                color_image.save(f"test/detect.jpg")
 
-            print("Image captured.")
+                print("Image captured.")
 
-            # with app:
-            data_file = "test/detect.zdf"
-            print(f"Reading ZDF frame from file: {data_file}")
-            frame = zivid.Frame(data_file)
-            point_cloud = frame.point_cloud()
+                # with app:
+                data_file = "test/detect.zdf"
+                print(f"Reading ZDF frame from file: {data_file}")
+                frame = zivid.Frame(data_file)
+                point_cloud = frame.point_cloud()
 
-            print("Converting to BGR image in OpenCV format")
-            bgr = _point_cloud_to_cv_bgr(point_cloud)
-            hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+                print("Converting to BGR image in OpenCV format")
+                bgr = _point_cloud_to_cv_bgr(point_cloud)
+                hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
 
-            bgr_image_file = "test/ImageRGB.png"
-            print(f"Visualizing and saving BGR image to file: {bgr_image_file}")
-            _visualize_and_save_image(bgr, bgr_image_file, "BGR image")
-            _detect_objects(bgr)
+                bgr_image_file = "test/ImageRGB.png"
+                print(f"Visualizing and saving BGR image to file: {bgr_image_file}")
+                _visualize_and_save_image(bgr, bgr_image_file, "BGR image")
+                _detect_objects(bgr)
 
-            print("Converting to Depth map in OpenCV format")
-            z_color_map = point_cloud.copy_data('xyz')
+                print("Converting to Depth map in OpenCV format")
+                z_color_map = point_cloud.copy_data('xyz')
 
-            with open("test/result.txt", "r") as f:
-                for line in f:
-                    xywh = line.strip().split("\n")
-                    char = ['[', ']', ',']
-                    for c in char:
-                        xywh = [line.replace(c, "") for line in xywh]
-                    xywh = [list(map(float, line.strip().split())) for line in xywh]
-                    xywh = np.array(xywh)
-                    x_pixel = int(xywh[0][0])
-                    y_pixel = int(xywh[0][1] + 150)
-                    color_detected = _detect_color(hsv, y_pixel -150, x_pixel)
-                    print(f"Object at x_coord: {x_pixel}, y_coord: {y_pixel -150} is in {color_detected} color")
+                with open("test/result.txt", "r") as f:
+                    for line in f:
+                        xywh = line.strip().split("\n")
+                        char = ['[', ']', ',']
+                        for c in char:
+                            xywh = [line.replace(c, "") for line in xywh]
+                        xywh = [list(map(float, line.strip().split())) for line in xywh]
+                        xywh = np.array(xywh)
+                        x_pixel = int(xywh[0][0])
+                        y_pixel = int(xywh[0][1] + 150)
+                        color_detected = _detect_color(hsv, y_pixel - 150, x_pixel)
+                        print(f"Object at x_coord: {x_pixel}, y_coord: {y_pixel - 150} is in {color_detected} color")
 
-                    if y_pixel > 1200:
-                        y_pixel = 1199
-                    x_value = z_color_map[y_pixel, x_pixel, 0]
-                    y_value = z_color_map[y_pixel, x_pixel, 1]
-                    z_value = z_color_map[y_pixel, x_pixel, 2]
-                    with open("test/xyz_coordinate.txt", "a") as file:
-                        if 'nan' not in str(x_value) and 'nan' not in str(y_value) or 'nan' not in str(z_value):
-                            print(f"XYZ value at pixel ({x_pixel}, {y_pixel}): {x_value} {y_value} {z_value}")
-                            file.write(f"{x_value} {y_value} {z_value} {1} {color_detected}\n")
+                        if y_pixel > 1200:
+                            y_pixel = 1199
+                        x_value = z_color_map[y_pixel, x_pixel, 0]
+                        y_value = z_color_map[y_pixel, x_pixel, 1]
+                        z_value = z_color_map[y_pixel, x_pixel, 2]
+                        with open("test/xyz_coordinate.txt", "a") as file:
+                            if 'nan' not in str(x_value) and 'nan' not in str(y_value) or 'nan' not in str(z_value):
+                                print(f"XYZ value at pixel ({x_pixel}, {y_pixel}): {x_value} {y_value} {z_value}")
+                                file.write(f"{x_value} {y_value} {z_value} {1} {color_detected}\n")
 
-                    with open("test/xyz_coordinate.txt", "r") as file:
-                        lines = file.readlines()
+                        with open("test/xyz_coordinate.txt", "r") as file:
+                            lines = file.readlines()
 
-                    sorted_lines = sorted(lines, key=lambda line: float(line.split()[2]))
+                        sorted_lines = sorted(lines, key=lambda line: float(line.split()[2]))
 
-                    with open("test/xyz_coordinate.txt", "w") as file:
-                        file.writelines(sorted_lines)
+                        with open("test/xyz_coordinate.txt", "w") as file:
+                            file.writelines(sorted_lines)
 
-                    try:
-                        if conn:  # Check if conn exists
-                            conn.send("Task done.")
-                    except (BrokenPipeError, EOFError, OSError) as e:
-                        print(f"[Camera] Failed to send response to client: {e}")
-                    finally:
                         try:
-                            conn.close()
-                        except Exception as e:
-                            print(f"[Camera] Failed to close connection: {e}")
+                            if conn:  # Check if conn exists
+                                conn.send("Task done.")
+                        except (BrokenPipeError, EOFError, OSError) as e:
+                            print(f"[Camera] Failed to send response to client: {e}")
+                        finally:
+                            try:
+                                conn.close()
+                            except Exception as e:
+                                print(f"[Camera] Failed to close connection: {e}")
 
-            print("Detected object coordinates saved.")
-            conn.close()
-        elif msg == "shutdown":
-            print("Disconnecting Zivid camera.")
-            try:
-                camera.disconnect()
-            except Exception as e:
-                print("Failed to disconnect camera:", e)
-            break
-        else:
-            conn.send(f"Unknown command: {msg}")
-    conn.close()
-    listener.close()
+                print("Detected object coordinates saved.")
+                conn.close()
+            elif msg == "shutdown":
+                print("Disconnecting Zivid camera.")
+                try:
+                    camera.disconnect()
+                except Exception as e:
+                    print("Failed to disconnect camera:", e)
+                break
+            else:
+                conn.send(f"Unknown command: {msg}")
+        except KeyboardInterrupt:
+            print("Interrupted by user.")
+
+        finally:
+            # cleanup resources safely
+            listener.close()
+            print("Resources cleaned up. Exiting.")
+            sys.exit(0)
 
 if __name__ == "__main__":
     _main()
