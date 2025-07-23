@@ -160,13 +160,16 @@ def _main() -> None:
                 conn.send(f"Unknown command: {msg}")
         except KeyboardInterrupt:
             print("Interrupted by user.")
-
         finally:
-            # cleanup resources safely
-            listener.close()
-            print("Resources cleaned up. Exiting.")
-            sys.exit(0)
+            try:
+                conn.close()
+            except Exception as e:
+                print(f"[Camera] Failed to close connection: {e}")
+
+    # Cleanup after loop ends
+    listener.close()
+    print("Resources cleaned up. Exiting.")
+    sys.exit(0)
 
 if __name__ == "__main__":
     _main()
-
