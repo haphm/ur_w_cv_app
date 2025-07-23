@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import zivid
 from ultralytics import YOLO
+from ultralytics.utils.plotting import Annotator
 from multiprocessing.connection import Listener
 from shared_common import APP_TO_CAM_ADDRESS, AUTH_KEY
 
@@ -29,7 +30,14 @@ def _detect_objects(image: np.ndarray) -> None:
             xywh = result.boxes.xywh.tolist()  # center-x, center-y, width, height
             for i in range(len(xywh)):
                 f.write(str(xywh[i]) + "\n")
-            result.save("test/result.png")  # save the image with predictions
+            # result.save("test/result.png")  # save the image with predictions
+            # Annotate only boxes, no labels
+            annotator = Annotator(np.ascontiguousarray(result.orig_img), line_width=2)
+            for box in result.boxes:
+                annotator.box_label(box.xyxy[0], label="", color=(0, 255, 0))  # green box, no label
+            # Save the image
+            annotated_img = annotator.result()
+            cv2.imwrite("test/result.png", annotated_img)
 
 def _detect_color(frame, x_coor, y_coor) -> str:
     color_thresholds = [3, 20, 30, 85, 130, 160, 179]
